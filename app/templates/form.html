@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Depression Prediction Form</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="form-page">
+  <div class="container">
+    <h1>Enter Your Information</h1>
+    <form action="/predict_form" method="post">
+      <label>Gender:</label>
+      <select name="Gender">
+        <option>Male</option>
+        <option>Female</option>
+      </select>
+
+      <label>Age:</label>
+      <input type="number" name="Age" required>
+
+      <label>Academic Pressure (1–5):</label>
+      <input type="number" name="Academic Pressure" min="1" max="5" required>
+
+      <label>Study Satisfaction (1–5):</label>
+      <input type="number" name="Study Satisfaction" min="1" max="5" required>
+
+      <label>Sleep Duration:</label>
+      <select name="Sleep Duration">
+        <option>Less than 5 hours</option>
+        <option>5-6 hours</option>
+        <option>7-8 hours</option>
+        <option>More than 8 hours</option>
+      </select>
+
+      <label>Dietary Habits:</label>
+      <select name="Dietary Habits">
+        <option>Healthy</option>
+        <option>Moderate</option>
+        <option>Poor</option>
+      </select>
+
+      <label>Have you ever had suicidal thoughts?</label>
+      <select name="Have you ever had suicidal thoughts ?">
+        <option>No</option>
+        <option>Yes</option>
+      </select>
+
+      <label>Study Hours per Day:</label>
+      <input type="number" name="Study Hours" required>
+
+      <label>Financial Stress (1–5):</label>
+      <input type="number" name="Financial Stress" min="1" max="5" required>
+
+      <label>Family History of Mental Illness:</label>
+      <select name="Family History of Mental Illness">
+        <option>No</option>
+        <option>Yes</option>
+      </select>
+
+      <button type="submit" class="btn-main">Predict</button>
+    </form>
+  </div>
+</body>
+</html>

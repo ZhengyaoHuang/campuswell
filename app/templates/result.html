@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Prediction Result</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="result-page">
+  <div class="result-card">
+    <h1>Prediction Result</h1>
+    <p class="label">Predicted Risk: 
+      <strong class="{{ 'high' if label.startswith('High') else 'low' }}">{{ label }}</strong>
+    </p>
+    <p class="prob">Probability: {{ prob }}%</p>
+
+    {% if shap_available %}
+      <div class="shap-box">
+        <h3>Feature Importance</h3>
+        <img src="{{ shap_img }}" alt="SHAP Plot" class="shap-img">
+      </div>
+    {% else %}
+      <p class="no-shap">Explanation not available.</p>
+    {% endif %}
+
+    <a href="/" class="btn-main">Try Again</a>
+  </div>
+</body>
+</html>

@@ -1,0 +1,82 @@
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #4a90e2, #6c5ce7);
+  color: #fff;
+  text-align: center;
+}
+
+.landing .center-box {
+  margin-top: 15%;
+}
+
+h1 {
+  font-size: 2.5em;
+  margin-bottom: 0.5em;
+}
+
+p {
+  font-size: 1.2em;
+}
+
+.btn-main {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 12px 24px;
+  background: #fff;
+  color: #4a90e2;
+  border-radius: 25px;
+  text-decoration: none;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.btn-main:hover {
+  background: #4a90e2;
+  color: #fff;
+}
+
+.container {
+  background: rgba(255, 255, 255, 0.1);
+  margin: 5% auto;
+  padding: 30px;
+  border-radius: 12px;
+  width: 50%;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+input, select {
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+}
+
+.result-card {
+  background: rgba(255, 255, 255, 0.1);
+  margin: 5% auto;
+  padding: 30px;
+  border-radius: 15px;
+  width: 50%;
+}
+
+.label strong.high { color: #ff7675; }
+.label strong.low { color: #55efc4; }
+
+.shap-img {
+  width: 100%;
+  max-width: 600px;
+  border-radius: 10px;
+  margin-top: 15px;
+}
+
+.no-shap {
+  font-style: italic;
+  color: #ffeaa7;
+}
