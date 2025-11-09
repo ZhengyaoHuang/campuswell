@@ -3,26 +3,261 @@
 <head>
   <meta charset="UTF-8">
   <title>Prediction Result</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #4a90e2, #6c5ce7);
+      color: #fff;
+      text-align: center;
+      min-height: 100vh;
+      padding-bottom: 50px;
+    }
+
+    .result-card {
+      background: rgba(255, 255, 255, 0.1);
+      margin: 5% auto;
+      padding: 30px;
+      border-radius: 15px;
+      width: 70%;
+      max-width: 900px;
+      backdrop-filter: blur(10px);
+    }
+
+    h1 {
+      font-size: 2.2em;
+      margin-bottom: 0.5em;
+    }
+
+    h2 {
+      font-size: 1.5em;
+      margin-top: 1.5em;
+      margin-bottom: 0.8em;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+      padding-bottom: 10px;
+    }
+
+    .prediction-summary {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 20px;
+      border-radius: 12px;
+      margin: 20px 0;
+    }
+
+    .label {
+      font-size: 1.3em;
+      margin: 15px 0;
+    }
+
+    .label strong.high { 
+      color: #ff7675; 
+      font-size: 1.2em;
+    }
+    
+    .label strong.low { 
+      color: #55efc4;
+      font-size: 1.2em;
+    }
+
+    .prob {
+      font-size: 1.5em;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+
+    .confidence {
+      font-size: 1em;
+      color: #ffeaa7;
+      font-style: italic;
+      margin: 10px 0;
+    }
+
+    .disclaimer {
+      background: rgba(255, 193, 7, 0.2);
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 20px 0;
+      text-align: left;
+      border-radius: 5px;
+      font-size: 0.95em;
+    }
+
+    .user-inputs-section {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 12px;
+      margin: 25px 0;
+      text-align: left;
+    }
+
+    .input-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .input-item {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 12px;
+      border-radius: 8px;
+      border-left: 3px solid #74b9ff;
+    }
+
+    .input-label {
+      font-weight: bold;
+      font-size: 0.9em;
+      color: #dfe6e9;
+      margin-bottom: 5px;
+    }
+
+    .input-value {
+      font-size: 1.1em;
+      color: #fff;
+    }
+
+    .shap-box {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 12px;
+      margin: 25px 0;
+    }
+
+    .shap-box h3 {
+      margin-top: 0;
+      font-size: 1.3em;
+    }
+
+    .shap-img {
+      width: 100%;
+      max-width: 700px;
+      border-radius: 10px;
+      margin-top: 15px;
+      background: white;
+      padding: 10px;
+    }
+
+    .no-shap {
+      font-style: italic;
+      color: #ffeaa7;
+      background: rgba(255, 234, 167, 0.2);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+
+    .btn-main {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 30px;
+      background: #fff;
+      color: #4a90e2;
+      border-radius: 25px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: 0.3s;
+      font-size: 1em;
+    }
+
+    .btn-main:hover {
+      background: #4a90e2;
+      color: #fff;
+      transform: scale(1.05);
+    }
+
+    .error-box {
+      background: rgba(231, 76, 60, 0.2);
+      border-left: 4px solid #e74c3c;
+      padding: 15px;
+      margin: 20px 0;
+      text-align: left;
+      border-radius: 5px;
+    }
+
+    @media (max-width: 768px) {
+      .result-card {
+        width: 90%;
+      }
+      
+      .input-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body class="result-page">
   <div class="result-card">
-    <h1>Prediction Result</h1>
-    <p class="label">Predicted Risk: 
-      <strong class="{{ 'high' if label.startswith('High') else 'low' }}">{{ label }}</strong>
-    </p>
-    <p class="prob">Probability: {{ prob }}%</p>
+    <h1>🧠 Prediction Result</h1>
+    
+    <div class="prediction-summary">
+      <p class="label">Predicted Risk: 
+        <strong class="{{ 'high' if label.startswith('High') else 'low' }}">{{ label }}</strong>
+      </p>
+      <p class="prob">{{ prob }}%</p>
+      <p class="confidence">
+        Model Confidence: 
+        {% if confidence == 'high' %}
+          <strong>High</strong> - The model is fairly confident in this prediction
+        {% elif confidence == 'moderate' %}
+          <strong>Moderate</strong> - The prediction shows some uncertainty
+        {% else %}
+          <strong>Error occurred</strong>
+        {% endif %}
+      </p>
+    </div>
+
+    <div class="disclaimer">
+      <strong>⚠️ Important Note:</strong> This prediction is based on a machine learning model and should not be used as a definitive diagnosis. The probability is capped at 95% to reflect inherent model uncertainty. If you're experiencing mental health concerns, please consult with a qualified healthcare professional.
+    </div>
+
+    <h2>📋 Your Submitted Information</h2>
+    <div class="user-inputs-section">
+      <div class="input-grid">
+        {% for key, value in user_inputs.items() %}
+        <div class="input-item">
+          <div class="input-label">{{ key }}</div>
+          <div class="input-value">{{ value }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
 
     {% if shap_available %}
+      <h2>📊 Feature Importance Explanation</h2>
       <div class="shap-box">
-        <h3>Feature Importance</h3>
+        <p style="text-align: left; margin-bottom: 15px;">
+          This chart shows which factors had the most impact on your prediction:
+        </p>
+        <ul style="text-align: left; line-height: 1.8; margin-bottom: 15px;">
+          <li><strong style="color: #ff6b6b;">Red bars</strong> indicate factors that <em>increase</em> depression risk</li>
+          <li><strong style="color: #4dabf7;">Blue bars</strong> indicate factors that <em>decrease</em> depression risk</li>
+          <li>Longer bars mean stronger influence on the prediction</li>
+        </ul>
         <img src="{{ shap_img }}" alt="SHAP Plot" class="shap-img">
       </div>
+    {% elif shap_error %}
+      <h2>📊 Feature Importance Explanation</h2>
+      <div class="error-box">
+        <strong>⚠️ Unable to generate explanation:</strong><br>
+        {{ shap_error }}
+      </div>
     {% else %}
-      <p class="no-shap">Explanation not available.</p>
+      <h2>📊 Feature Importance Explanation</h2>
+      <p class="no-shap">
+        Feature importance explanation is currently being processed. This analysis shows which of your responses had the most impact on the prediction.
+      </p>
     {% endif %}
 
-    <a href="/" class="btn-main">Try Again</a>
+    <div style="margin-top: 30px;">
+      <a href="/" class="btn-main">← Try Another Prediction</a>
+    </div>
+
+    <div style="margin-top: 20px; font-size: 0.85em; color: rgba(255,255,255,0.7);">
+      <p>Need help? Contact a mental health professional:</p>
+      <p><strong>National Suicide Prevention Lifeline:</strong> 988 (US)</p>
+      <p><strong>Crisis Text Line:</strong> Text HOME to 741741</p>
+    </div>
   </div>
 </body>
 </html>

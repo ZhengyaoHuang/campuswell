@@ -3,59 +3,269 @@
 <head>
   <meta charset="UTF-8">
   <title>Depression Prediction Form</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #4a90e2, #6c5ce7);
+      color: #fff;
+      text-align: center;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      margin: 5% auto;
+      padding: 30px;
+      border-radius: 12px;
+      width: 50%;
+      max-width: 600px;
+    }
+
+    h1 {
+      font-size: 2em;
+      margin-bottom: 1em;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      text-align: left;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    label {
+      font-weight: bold;
+      font-size: 1em;
+    }
+
+    .info-text {
+      font-size: 0.85em;
+      color: #ffeaa7;
+      font-style: italic;
+      margin-top: -3px;
+    }
+
+    input, select {
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      font-size: 1em;
+    }
+
+    .scale-container {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .scale-option {
+      flex: 1;
+      min-width: 45%;
+    }
+
+    .scale-option input[type="radio"] {
+      margin-right: 5px;
+    }
+
+    .scale-option label {
+      font-weight: normal;
+      font-size: 0.9em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+
+    .btn-main {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 24px;
+      background: #fff;
+      color: #4a90e2;
+      border-radius: 25px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: 0.3s;
+      border: none;
+      cursor: pointer;
+      font-size: 1em;
+    }
+
+    .btn-main:hover {
+      background: #4a90e2;
+      color: #fff;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        width: 90%;
+      }
+    }
+  </style>
 </head>
 <body class="form-page">
   <div class="container">
     <h1>Enter Your Information</h1>
     <form action="/predict_form" method="post">
-      <label>Gender:</label>
-      <select name="Gender">
-        <option>Male</option>
-        <option>Female</option>
-      </select>
+      
+      <div class="form-group">
+        <label>Gender:</label>
+        <select name="Gender" required>
+          <option value="">-- Select Gender --</option>
+          <option>Male</option>
+          <option>Female</option>
+        </select>
+      </div>
 
-      <label>Age:</label>
-      <input type="number" name="Age" required>
+      <div class="form-group">
+        <label>Age:</label>
+        <select name="Age" required>
+          <option value="">-- Select Age --</option>
+          <script>
+            for (let i = 16; i <= 60; i++) {
+              document.write(`<option value="${i}">${i}</option>`);
+            }
+          </script>
+        </select>
+      </div>
 
-      <label>Academic Pressure (1–5):</label>
-      <input type="number" name="Academic Pressure" min="1" max="5" required>
+      <div class="form-group">
+        <label>Academic Pressure:</label>
+        <p class="info-text">1 = Very Low, 2 = Low, 3 = Moderate, 4 = High, 5 = Very High</p>
+        <div class="scale-container">
+          <div class="scale-option">
+            <input type="radio" id="ap1" name="Academic Pressure" value="1" required>
+            <label for="ap1">1 - Very Low</label>
+          </div>
+          <div class="scale-option">
+            <input type="radio" id="ap2" name="Academic Pressure" value="2">
+            <label for="ap2">2 - Low</label>
+          </div>
+          <div class="scale-option">
+            <input type="radio" id="ap3" name="Academic Pressure" value="3">
+            <label for="ap3">3 - Moderate</label>
+          </div>
+          <div class="scale-option">
+            <input type="radio" id="ap4" name="Academic Pressure" value="4">
+            <label for="ap4">4 - High</label>
+          </div>
+          <div class="scale-option">
+            <input type="radio" id="ap5" name="Academic Pressure" value="5">
+            <label for="ap5">5 - Very High</label>
+          </div>
+        </div>
+      </div>
 
-      <label>Study Satisfaction (1–5):</label>
-      <input type="number" name="Study Satisfaction" min="1" max="5" required>
+      <div class="form-group">
+        <label>Study Satisfaction:</label>
+        <p class="info-text">1 = Very Dissatisfied, 2 = Dissatisfied, 3 = Neutral, 4 = Satisfied, 5 = Very Satisfied</p>
+        <div class="scale-container">
+          <div class="scale-option">
+            <input type="radio" id="ss1" name="Study Satisfaction" value="1" required>
+            <label for="ss1">1 - Very Dissatisfied</label>
+          </div>
+          <div class="scale-option">
+            <input type="radio" id="ss2" name="Study Satisfaction" value="2">
+            <label for="ss2">2 - Dissatisfied</label>
+          </div>
+          <div class="scale-option">
+            <input type="radio" id="ss3" name="Study Satisfaction" value="3">
+            <label for="ss3">3 - Neutral</label>
+          </div>
+          <div class="scale-option">
+            <input type="radio" id="ss4" name="Study Satisfaction" value="4">
+            <label for="ss4">4 - Satisfied</label>
+          </div>
+          <div class="scale-option">
+            <input type="radio" id="ss5" name="Study Satisfaction" value="5">
+            <label for="ss5">5 - Very Satisfied</label>
+          </div>
+        </div>
+      </div>
 
-      <label>Sleep Duration:</label>
-      <select name="Sleep Duration">
-        <option>Less than 5 hours</option>
-        <option>5-6 hours</option>
-        <option>7-8 hours</option>
-        <option>More than 8 hours</option>
-      </select>
+      <div class="form-group">
+        <label>Sleep Duration:</label>
+        <select name="Sleep Duration" required>
+          <option value="">-- Select Sleep Duration --</option>
+          <option>Less than 5 hours</option>
+          <option>5-6 hours</option>
+          <option>7-8 hours</option>
+          <option>More than 8 hours</option>
+        </select>
+      </div>
 
-      <label>Dietary Habits:</label>
-      <select name="Dietary Habits">
-        <option>Healthy</option>
-        <option>Moderate</option>
-        <option>Poor</option>
-      </select>
+      <div class="form-group">
+        <label>Dietary Habits:</label>
+        <select name="Dietary Habits" required>
+          <option value="">-- Select Dietary Habits --</option>
+          <option>Healthy</option>
+          <option>Moderate</option>
+          <option>Poor</option>
+        </select>
+      </div>
 
-      <label>Have you ever had suicidal thoughts?</label>
-      <select name="Have you ever had suicidal thoughts ?">
-        <option>No</option>
-        <option>Yes</option>
-      </select>
+      <div class="form-group">
+        <label>Have you ever had suicidal thoughts?</label>
+        <select name="Have you ever had suicidal thoughts ?" required>
+          <option value="">-- Select Answer --</option>
+          <option>No</option>
+          <option>Yes</option>
+        </select>
+      </div>
 
-      <label>Study Hours per Day:</label>
-      <input type="number" name="Study Hours" required>
+      <div class="form-group">
+        <label>Study Hours per Day:</label>
+        <select name="Study Hours" required>
+          <option value="">-- Select Study Hours --</option>
+          <script>
+            for (let i = 0; i <= 16; i++) {
+              document.write(`<option value="${i}">${i} hour${i !== 1 ? 's' : ''}</option>`);
+            }
+          </script>
+        </select>
+      </div>
 
-      <label>Financial Stress (1–5):</label>
-      <input type="number" name="Financial Stress" min="1" max="5" required>
+      <div class="form-group">
+        <label>Financial Stress:</label>
+        <p class="info-text">1 = Very Low, 2 = Low, 3 = Moderate, 4 = High, 5 = Very High</p>
+        <div class="scale-container">
+          <div class="scale-option">
+            <input type="radio" id="fs1" name="Financial Stress" value="1" required>
+            <label for="fs1">1 - Very Low</label>
+          </div>
+          <div class="scale-option">
+            <input type="radio" id="fs2" name="Financial Stress" value="2">
+            <label for="fs2">2 - Low</label>
+          </div>
+          <div class="scale-option">
+            <input type="radio" id="fs3" name="Financial Stress" value="3">
+            <label for="fs3">3 - Moderate</label>
+          </div>
+          <div class="scale-option">
+            <input type="radio" id="fs4" name="Financial Stress" value="4">
+            <label for="fs4">4 - High</label>
+          </div>
+          <div class="scale-option">
+            <input type="radio" id="fs5" name="Financial Stress" value="5">
+            <label for="fs5">5 - Very High</label>
+          </div>
+        </div>
+      </div>
 
-      <label>Family History of Mental Illness:</label>
-      <select name="Family History of Mental Illness">
-        <option>No</option>
-        <option>Yes</option>
-      </select>
+      <div class="form-group">
+        <label>Family History of Mental Illness:</label>
+        <select name="Family History of Mental Illness" required>
+          <option value="">-- Select Answer --</option>
+          <option>No</option>
+          <option>Yes</option>
+        </select>
+      </div>
 
       <button type="submit" class="btn-main">Predict</button>
     </form>
