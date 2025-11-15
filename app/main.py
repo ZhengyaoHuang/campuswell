@@ -285,28 +285,87 @@ def predict_form(
                 shap_values = shap_values[0]
                 print(f"   Flattened to shape: {np.array(shap_values).shape}")
             
-            # Create visualization
+            # Create visualization showing direction of impact
             print("\n📊 Creating visualization...")
+            
+            # Clean up feature names FIRST
+            cleaned_names = []
+            for name in feature_names:
+                # Remove common prefixes
+                clean_name = name.replace('num_', '').replace('cat_', '').replace('remainder__', '')
+                clean_name = clean_name.replace('onehotencoder__', '').replace('ordinalencoder__', '')
+                # Remove leading/trailing underscores
+                clean_name = clean_name.strip('_')
+                
+                # For categorical features, remove the category value suffix
+                # This aggregates all categories of the same feature into one
+                if '_' in clean_name:
+                    # Common patterns: feature_name_category_value
+                    # We want to keep only the feature_name part
+                    parts = clean_name.split('_')
+                    
+                    # Check if last part looks like a category value
+                    if len(parts) >= 2:
+                        last_part = parts[-1].lower()
+                        # List of common category indicators
+                        category_keywords = ['healthy', 'unhealthy', 'moderate', 'poor', 'yes', 'no', 
+                                           'male', 'female', 'hours', 'than', 'very', 'high', 'low',
+                                           'less', 'more', 'satisfied', 'dissatisfied']
+                        
+                        # If last part contains category keywords or starts with lowercase, remove it
+                        if any(keyword in last_part for keyword in category_keywords) or last_part[0].islower():
+                            clean_name = '_'.join(parts[:-1])
+                
+                # Replace remaining underscores with spaces for readability
+                clean_name = clean_name.replace('_', ' ')
+                cleaned_names.append(clean_name)
+            
+            print(f"📝 Cleaned feature names sample: {cleaned_names[:5]}")
+            
+            # Aggregate SHAP values by cleaned feature name (keeping sign for direction)
+            feature_shap_dict = {}
+            for clean_name, shap_val in zip(cleaned_names, shap_values):
+                if clean_name in feature_shap_dict:
+                    # Sum SHAP values to aggregate multiple encodings of same feature
+                    feature_shap_dict[clean_name] += shap_val
+                else:
+                    feature_shap_dict[clean_name] = shap_val
+            
+            print(f"📊 Aggregated features count: {len(feature_shap_dict)}")
+            print(f"📊 Top aggregated features: {list(feature_shap_dict.keys())[:10]}")
+            
+            # Sort by absolute importance but keep the sign
+            sorted_features = sorted(feature_shap_dict.items(), 
+                                   key=lambda x: abs(x[1]), 
+                                   reverse=True)
+            n_display = min(10, len(sorted_features))
+            top_features = sorted_features[:n_display]
+            
+            # Reverse for plotting (highest at top)
+            top_features = list(reversed(top_features))
+            
+            display_names = [name for name, _ in top_features]
+            display_values = [value for _, value in top_features]
+            
+            # Truncate long names
+            display_names = [name[:45] + '...' if len(name) > 45 else name for name in display_names]
+            
+            print(f"📊 Final display features: {display_names}")
+            
+            # Create plot with color-coded direction
             plt.figure(figsize=(10, 6))
             
-            # Get absolute values for importance
-            feature_importance = np.abs(shap_values)
+            # Color bars based on direction: red for positive (increases risk), blue for negative (decreases risk)
+            colors = ['#ff6b6b' if val > 0 else '#4dabf7' for val in display_values]
             
-            # Get top 10 features
-            n_display = min(10, len(feature_importance))
-            sorted_idx = np.argsort(feature_importance)[-n_display:]
-            
-            # Create bar plot
-            colors = ['#ff6b6b' if shap_values[i] > 0 else '#4dabf7' for i in sorted_idx]
-            plt.barh(range(n_display), feature_importance[sorted_idx], color=colors)
-            
-            # Truncate long feature names
-            display_names = [feature_names[i][:40] + '...' if len(feature_names[i]) > 40 else feature_names[i] 
-                           for i in sorted_idx]
+            plt.barh(range(n_display), display_values, color=colors)
             plt.yticks(range(n_display), display_names, fontsize=9)
             
-            plt.xlabel('Impact on Prediction (absolute SHAP value)', fontsize=10)
-            plt.title('Top 10 Most Important Features\n(Red=increases risk, Blue=decreases risk)', fontsize=11)
+            # Add a vertical line at zero
+            plt.axvline(x=0, color='white', linestyle='-', linewidth=1, alpha=0.5)
+            
+            plt.xlabel('Impact on Depression Risk', fontsize=10)
+            plt.title('Top 10 Factors That Influenced Your Prediction\n(Red = Increases Risk | Blue = Decreases Risk)', fontsize=11)
             plt.tight_layout()
             
             # Save plot

@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-from campuswell.predict import load_pipeline, predict_one
+# Assuming 'campuswell.predict' is available in your environment
+from campuswell.predict import load_pipeline, predict_one 
 
 
 # ===============================
@@ -21,11 +22,15 @@ from campuswell.predict import load_pipeline, predict_one
 BASE = os.path.dirname(os.path.dirname(__file__))
 MODEL_PATH = os.path.join(BASE, "models", "best_pipeline.joblib")
 META_PATH = os.path.join(BASE, "models", "metadata.json")
+# Path to the uploaded dataset
+DATASET_PATH = "Depression Student Dataset.csv"
 
 app = FastAPI(title="Depression Risk Predictor")
 
 # Serve static and templates
-app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static")), name="static")
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+os.makedirs(static_dir, exist_ok=True)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
 
 
@@ -34,16 +39,32 @@ class Input(BaseModel, extra=Extra.allow):
 
 
 # ===============================
-# LOAD MODEL
+# LOAD MODEL AND DATA (for SHAP background)
 # ===============================
 @app.on_event("startup")
 def _load_model():
+    # Load the machine learning pipeline
     app.state.model = load_pipeline(MODEL_PATH)
+    print(f"✅ Model loaded: {type(app.state.model)}")
+    print(f"✅ Pipeline steps: {app.state.model.named_steps.keys()}")
+    
+    # Load metadata
     if os.path.exists(META_PATH):
         with open(META_PATH, "r") as f:
             app.state.meta = json.load(f)
     else:
         app.state.meta = {}
+
+    # Load and preprocess data for SHAP background
+    try:
+        full_data = pd.read_csv(DATASET_PATH)
+        # Drop the target variable (Depression)
+        app.state.shap_background_data = full_data.drop(columns=["Depression"], errors="ignore")
+        print(f"✅ Loaded {len(app.state.shap_background_data)} records for SHAP background")
+        print(f"✅ Columns: {list(app.state.shap_background_data.columns)}")
+    except Exception as e:
+        print(f"⚠️ Failed to load dataset for SHAP background: {e}")
+        app.state.shap_background_data = None
 
 
 @app.get("/health")
@@ -111,76 +132,229 @@ def predict_form(
 
     model = app.state.model
     df = pd.DataFrame([record])
-    proba = float(model.predict_proba(df)[:, 1][0])
-    label = "High Risk of Depression" if proba >= 0.5 else "Low Risk of Depression"
-
-    # ===============================
-    # SHAP EXPLANATION (KernelExplainer)
-    # ===============================
+    
+    # Make prediction
     try:
-        preprocessor = model.named_steps["preprocessor"]
-        clf = model.named_steps["model"]
-
-        # Background data for SHAP comparison
-        background_df = pd.DataFrame([
-            record,
-            record.copy(),
-            {
-                "Gender": "Female",
-                "Age": 21,
-                "Academic Pressure": 3,
-                "Study Satisfaction": 3,
-                "Sleep Duration": "7-8 hours",
-                "Dietary Habits": "Moderate",
-                "Have you ever had suicidal thoughts ?": "No",
-                "Study Hours": 5,
-                "Financial Stress": 2,
-                "Family History of Mental Illness": "No"
-            }
-        ])
-
-        # Transform data
-        X_bg = preprocessor.transform(background_df)
-        X_in = preprocessor.transform(df)
-
-        # Convert sparse → dense if needed
-        if hasattr(X_bg, "toarray"):
-            X_bg = X_bg.toarray()
-        if hasattr(X_in, "toarray"):
-            X_in = X_in.toarray()
-
-        # Get feature names
-        try:
-            feature_names = preprocessor.get_feature_names_out()
-        except Exception:
-            feature_names = [f"feature_{i}" for i in range(X_in.shape[1])]
-
-        # Define SHAP function for Logistic Regression
-        f = lambda x: clf.predict_proba(x)[:, 1]
-
-        # KernelExplainer (model-agnostic)
-        explainer = shap.KernelExplainer(f, X_bg)
-        shap_values = explainer.shap_values(X_in, nsamples=100)
-
-        # Generate bar plot
-        plt.figure()
-        shap.summary_plot(
-            shap_values,
-            X_in,
-            feature_names=feature_names,
-            plot_type="bar",
-            show=False
-        )
-        plt.tight_layout()
-
-        shap_path = os.path.join(os.path.dirname(__file__), "static", "shap_plot.png")
-        plt.savefig(shap_path)
-        plt.close()
-        shap_available = True
-
+        proba = float(model.predict_proba(df)[:, 1][0])
+        
+        # Cap probability at 95% to reflect model uncertainty
+        # No model is 100% certain
+        display_proba = min(proba, 0.95)
+        
+        label = "High Risk of Depression" if proba >= 0.5 else "Low Risk of Depression"
+        confidence = "high" if proba >= 0.7 or proba <= 0.3 else "moderate"
+        
     except Exception as e:
-        shap_available = False
-        print("⚠️ SHAP explanation failed:", e)
+        print(f"❌ Prediction error: {e}")
+        import traceback
+        traceback.print_exc()
+        return templates.TemplateResponse(
+            "result.html",
+            {
+                "request": request,
+                "label": "Error in prediction",
+                "prob": 0,
+                "confidence": "error",
+                "user_inputs": record,
+                "shap_available": False,
+                "shap_img": None,
+                "error_message": str(e),
+            },
+        )
+
+    # ===============================================================
+    # SHAP EXPLANATION (COMPREHENSIVE DEBUG VERSION)
+    # ===============================================================
+    shap_available = False
+    error_message = ""
+    
+    if app.state.shap_background_data is None:
+        error_message = "Background data not loaded"
+        print(f"❌ {error_message}")
+    else:
+        try:
+            print("\n" + "="*60)
+            print("🔍 STARTING SHAP EXPLANATION")
+            print("="*60)
+            
+            # Get preprocessor and classifier from pipeline
+            try:
+                preprocessor = model.named_steps["preprocess"]
+                print(f"✅ Preprocessor type: {type(preprocessor)}")
+            except KeyError:
+                print(f"❌ Available steps: {list(model.named_steps.keys())}")
+                raise Exception("No 'preprocess' step found in pipeline")
+            
+            try:
+                clf = model.named_steps["model"]
+                print(f"✅ Classifier type: {type(clf).__name__}")
+            except KeyError:
+                # Try alternative names
+                for step_name in ['classifier', 'clf', 'estimator']:
+                    if step_name in model.named_steps:
+                        clf = model.named_steps[step_name]
+                        print(f"✅ Classifier found as '{step_name}': {type(clf).__name__}")
+                        break
+                else:
+                    print(f"❌ Available steps: {list(model.named_steps.keys())}")
+                    raise Exception("No classifier found in pipeline")
+            
+            # Sample background data
+            n_samples = min(50, len(app.state.shap_background_data))
+            background_df = app.state.shap_background_data.sample(n=n_samples, random_state=42)
+            print(f"✅ Background sample size: {n_samples}")
+            
+            # Transform data
+            print("🔄 Transforming background data...")
+            X_bg = preprocessor.transform(background_df)
+            print(f"   Shape after transform: {X_bg.shape}")
+            print(f"   Type: {type(X_bg)}")
+            print(f"   Is sparse: {hasattr(X_bg, 'toarray')}")
+            
+            print("🔄 Transforming input data...")
+            X_in = preprocessor.transform(df)
+            print(f"   Shape after transform: {X_in.shape}")
+            print(f"   Type: {type(X_in)}")
+            
+            # Convert sparse matrices to dense
+            if hasattr(X_bg, 'toarray'):
+                print("🔄 Converting background to dense array...")
+                X_bg = X_bg.toarray()
+            if hasattr(X_in, 'toarray'):
+                print("🔄 Converting input to dense array...")
+                X_in = X_in.toarray()
+            
+            print(f"✅ Final shapes - Background: {X_bg.shape}, Input: {X_in.shape}")
+            
+            # Get feature names
+            try:
+                feature_names = list(preprocessor.get_feature_names_out())
+                print(f"✅ Got {len(feature_names)} feature names using get_feature_names_out()")
+            except AttributeError:
+                print("⚠️ get_feature_names_out() not available, using generic names")
+                feature_names = [f"feature_{i}" for i in range(X_in.shape[1])]
+            
+            # Determine the best explainer
+            model_type = type(clf).__name__
+            print(f"\n🤖 Model type detected: {model_type}")
+            
+            # Test if model has predict_proba
+            try:
+                test_proba = clf.predict_proba(X_in)
+                print(f"✅ Model has predict_proba: output shape {test_proba.shape}")
+            except Exception as e:
+                print(f"⚠️ predict_proba test failed: {e}")
+            
+            print("\n🔧 Creating SHAP explainer...")
+            
+            # Try different explainers based on model type
+            if 'Logistic' in model_type or 'Linear' in model_type:
+                print("   Using LinearExplainer...")
+                explainer = shap.LinearExplainer(clf, X_bg, feature_perturbation="interventional")
+                shap_values = explainer.shap_values(X_in)
+                
+                # Handle multi-output for binary classification
+                if isinstance(shap_values, list):
+                    print(f"   Got list of {len(shap_values)} arrays")
+                    shap_values = shap_values[1] if len(shap_values) == 2 else shap_values[0]
+                
+            elif 'Tree' in model_type or 'Forest' in model_type or 'Boost' in model_type or 'XGB' in model_type:
+                print("   Using TreeExplainer...")
+                explainer = shap.TreeExplainer(clf)
+                shap_values = explainer.shap_values(X_in)
+                
+                # Handle multi-output for binary classification
+                if isinstance(shap_values, list):
+                    print(f"   Got list of {len(shap_values)} arrays")
+                    shap_values = shap_values[1] if len(shap_values) == 2 else shap_values[0]
+                    
+            else:
+                print("   Using KernelExplainer (slower but universal)...")
+                def predict_fn(x):
+                    return clf.predict_proba(x)[:, 1]
+                
+                explainer = shap.KernelExplainer(predict_fn, X_bg[:20])  # Use fewer samples for speed
+                shap_values = explainer.shap_values(X_in, nsamples=50)
+            
+            print(f"✅ SHAP values computed!")
+            print(f"   Type: {type(shap_values)}")
+            print(f"   Shape: {np.array(shap_values).shape}")
+            
+            # Flatten if needed
+            if len(np.array(shap_values).shape) > 1:
+                shap_values = shap_values[0]
+                print(f"   Flattened to shape: {np.array(shap_values).shape}")
+            
+            # Create visualization
+            print("\n📊 Creating visualization...")
+            plt.figure(figsize=(10, 6))
+            
+            # Get absolute values for importance
+            feature_importance = np.abs(shap_values)
+            
+            # Get top 10 features
+            n_display = min(10, len(feature_importance))
+            sorted_idx = np.argsort(feature_importance)[-n_display:]
+            
+            # Create bar plot
+            colors = ['#ff6b6b' if shap_values[i] > 0 else '#4dabf7' for i in sorted_idx]
+            plt.barh(range(n_display), feature_importance[sorted_idx], color=colors)
+            
+            # Truncate long feature names
+            display_names = [feature_names[i][:40] + '...' if len(feature_names[i]) > 40 else feature_names[i] 
+                           for i in sorted_idx]
+            plt.yticks(range(n_display), display_names, fontsize=9)
+            
+            plt.xlabel('Impact on Prediction (absolute SHAP value)', fontsize=10)
+            plt.title('Top 10 Most Important Features\n(Red=increases risk, Blue=decreases risk)', fontsize=11)
+            plt.tight_layout()
+            
+            # Save plot
+            shap_path = os.path.join(static_dir, "shap_plot.png")
+            plt.savefig(shap_path, dpi=100, bbox_inches='tight')
+            plt.close()
+            
+            print(f"✅ Plot saved to: {shap_path}")
+            print(f"✅ File exists: {os.path.exists(shap_path)}")
+            
+            shap_available = True
+            print("\n" + "="*60)
+            print("✅ SHAP EXPLANATION COMPLETED SUCCESSFULLY!")
+            print("="*60 + "\n")
+
+        except Exception as e:
+            shap_available = False
+            error_message = str(e)
+            print(f"\n❌ SHAP EXPLANATION FAILED!")
+            print(f"❌ Error type: {type(e).__name__}")
+            print(f"❌ Error message: {error_message}")
+            print("\n📋 Full traceback:")
+            import traceback
+            traceback.print_exc()
+            print("="*60 + "\n")
+
+    # Create readable labels for scales
+    scale_labels = {
+        1: "Very Low", 2: "Low", 3: "Moderate", 4: "High", 5: "Very High"
+    }
+    satisfaction_labels = {
+        1: "Very Dissatisfied", 2: "Dissatisfied", 3: "Neutral", 
+        4: "Satisfied", 5: "Very Satisfied"
+    }
+    
+    # Format user inputs for display
+    display_inputs = {
+        "Gender": Gender,
+        "Age": f"{Age} years old",
+        "Academic Pressure": f"{Academic_Pressure} ({scale_labels.get(Academic_Pressure, '')})",
+        "Study Satisfaction": f"{Study_Satisfaction} ({satisfaction_labels.get(Study_Satisfaction, '')})",
+        "Sleep Duration": Sleep_Duration,
+        "Dietary Habits": Dietary_Habits,
+        "Suicidal Thoughts": Suicidal_Thoughts,
+        "Study Hours": f"{Study_Hours} hours per day",
+        "Financial Stress": f"{Financial_Stress} ({scale_labels.get(Financial_Stress, '')})",
+        "Family History": Family_History,
+    }
 
     # ===============================
     # RETURN RESULT PAGE
@@ -190,8 +364,11 @@ def predict_form(
         {
             "request": request,
             "label": label,
-            "prob": round(proba * 100, 2),
+            "prob": round(display_proba * 100, 1),
+            "confidence": confidence,
+            "user_inputs": display_inputs,
             "shap_available": shap_available,
             "shap_img": "/static/shap_plot.png" if shap_available else None,
+            "shap_error": error_message if not shap_available and error_message else None,
         },
     )
