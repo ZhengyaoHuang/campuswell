@@ -230,18 +230,25 @@
           This chart shows which of your responses had the <strong>strongest influence</strong> on your prediction result and in which direction:
         </p>
         <ul style="text-align: left; line-height: 1.8; margin-bottom: 15px;">
-          <li><strong style="color: #ff6b6b;">Red bars (positive values)</strong>: These factors <strong>increased your depression risk</strong> in this prediction</li>
-          <li><strong style="color: #4dabf7;">Blue bars (negative values)</strong>: These factors <strong>decreased your depression risk</strong> in this prediction</li>
+          <li><strong style="color: #ff6b6b;">Red bars (positive values)</strong>: These factors <strong>pushed your prediction toward higher risk</strong></li>
+          <li><strong style="color: #4dabf7;">Blue bars (negative values)</strong>: These factors <strong>pushed your prediction toward lower risk</strong></li>
           <li><strong>Bar length</strong>: Shows how strongly each factor influenced your specific prediction</li>
           <li>The chart displays the top 10 most influential factors for your case</li>
         </ul>
+        <div style="background: rgba(255, 193, 7, 0.2); border-left: 4px solid #ffc107; padding: 12px; border-radius: 8px; text-align: left; margin-bottom: 15px; font-size: 0.9em;">
+          <strong>⚠️ Important Context:</strong> The colors show the <em>direction of influence for YOUR specific values</em>, not whether a factor is generally "good" or "bad." 
+          <br><br>
+          For example:
+          <ul style="margin: 8px 0; padding-left: 20px;">
+            <li><strong>Age:</strong> If your age appears as red, it means your specific age ({{ user_inputs.Age }}) increased risk in this prediction compared to the average age in the model's training data. A different age might show as blue. This reflects patterns the model learned, not that any age is inherently risky.</li>
+            <li><strong>Categorical factors:</strong> Features like "Suicidal Thoughts" or "Sleep Duration" have clearer interpretations - certain responses consistently increase or decrease risk.</li>
+          </ul>
+          The model considers how all your responses <strong>interact together</strong>, so the same factor can have different effects for different people depending on their other responses.
+        </div>
         <div style="background: rgba(100, 181, 246, 0.2); padding: 12px; border-radius: 8px; text-align: left; margin-bottom: 15px; font-size: 0.9em;">
-          <strong>💡 How to read this:</strong> The model looked at all your responses together. Red bars show factors that pushed your prediction toward higher risk, while blue bars show factors that pushed it toward lower risk. The length shows how much impact each factor had on your final {{ prob }}% risk score.
+          <strong>💡 How to read this:</strong> Focus on which factors had the <strong>largest impact</strong> (longest bars) on your {{ prob }}% risk score. The colors show whether that factor pushed you toward higher risk (red) or lower risk (blue) <em>in your specific case</em>.
         </div>
         <img src="{{ shap_img }}" alt="Feature Importance Chart" class="shap-img">
-        <p style="text-align: left; margin-top: 15px; font-size: 0.9em; color: rgba(255,255,255,0.8);">
-          <strong>Note:</strong> This analysis is personalized to your specific combination of responses. The same factor may increase risk for one person but decrease it for another, depending on their specific value for that feature and how it interacts with their other responses.
-        </p>
       </div>
     {% elif shap_error %}
       <h2>📊 Feature Importance Explanation</h2>
